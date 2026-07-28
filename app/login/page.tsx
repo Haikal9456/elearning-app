@@ -1,29 +1,106 @@
-'use client'
-import { useState } from 'react'
-import { createClient } from '@/lib/supabase'
-import { useRouter } from 'next/navigation'
+"use client";
+import { useState } from "react";
+import { createClient } from "@/lib/supabase";
+import { useRouter } from "next/navigation";
 
 export default function Login() {
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
-  const router = useRouter()
-  const supabase = createClient()
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
+  const router = useRouter();
+  const supabase = createClient();
 
   async function handleLogin() {
-    const { error } = await supabase.auth.signInWithPassword({ email, password })
-    if (error) return alert(error.message)
-    router.push('/dashboard')
+    if (!email.trim() || !password.trim()) {
+      return setError("Please enter your email and password");
+    }
+    setError("");
+    setLoading(true);
+
+    const { data, error: loginError } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+
+    if (loginError) {
+      setLoading(false);
+      return setError(loginError.message);
+    }
+
+    // Check role to decide where to send them
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("role")
+      .eq("id", data.user.id)
+      .single();
+
+    setLoading(false);
+
+    const staffRoles = ["admin", "coordinator", "instructor"];
+    if (profile && staffRoles.includes(profile.role)) {
+      router.push("/admin");
+    } else {
+      router.push("/dashboard");
+    }
   }
 
   return (
-    <div className="max-w-md mx-auto mt-20 p-6">
-      <h1 className="text-2xl font-bold mb-4">Log In</h1>
-      <input className="border p-2 w-full mb-2" placeholder="Email"
-        onChange={e => setEmail(e.target.value)} />
-      <input className="border p-2 w-full mb-2" type="password" placeholder="Password"
-        onChange={e => setPassword(e.target.value)} />
-      <button className="bg-blue-600 text-white px-4 py-2 rounded w-full"
-        onClick={handleLogin}>Log In</button>
+    <div className="max-w-sm mx-auto mt-16 sm:mt-24 px-4">
+      <div className="rounded-2xl p-6 sm:p-8 bg-white border border-slate-200 shadow-sm">
+        <h1 className="text-xl font-bold text-slate-700 mb-1 text-center">
+          Log In
+        </h1>
+        <p className="text-sm text-slate-400 mb-6 text-center">Welcome back</p>
+
+        <input
+          className="border border-slate-200 rounded-lg p-3 w-full mb-3"
+          placeholder="Email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+        />
+        <input
+          className="border border-slate-200 rounded-lg p-3 w-full mb-3"
+          type="password"
+          placeholder="Password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          onKeyDown={(e) => e.key === "Enter" && handleLogin()}
+        />
+
+        {error && <p className="text-red-500 text-sm mb-3">{error}</p>}
+
+        <button
+          onClick={handleLogin}
+          disabled={loading}
+          className="text-white px-4 py-3 rounded-lg w-full font-semibold"
+          style={{ backgroundColor: "#5B8DEF" }}
+        >
+          {loading ? "Logging in..." : "Log In"}
+        </button>
+
+        <p className="text-xs text-slate-400 mt-6 text-center">
+          Don't have an account?{" "}
+          <a
+            href="/signup"
+            className="font-medium"
+            style={{ color: "#5B8DEF" }}
+          >
+            Sign up
+          </a>
+        </p>
+
+        <p className="text-xs text-slate-400 mt-2 text-center">
+          Are you a student?{" "}
+          <a
+            href="/student-login"
+            className="font-medium"
+            style={{ color: "#5B8DEF" }}
+          >
+            Log in here
+          </a>
+        </p>
+      </div>
     </div>
-  )
+  );
 }

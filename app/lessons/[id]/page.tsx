@@ -1,3 +1,9 @@
+"use client";
+import { useEffect, useState } from "react";
+import { useParams, useRouter } from "next/navigation";
+import { createClient } from "@/lib/supabase";
+import { checkAndAwardBadges } from "@/lib/badges";
+
 function QuizQuestion({
   quiz,
   userId,
@@ -37,7 +43,7 @@ function QuizQuestion({
       {type === "sentence" && (
         <SentenceQuiz quiz={quiz} onDone={recordAttempt} />
       )}
-      {type === "count" && <CountQuiz quiz={quiz} onDone={recordAttempt} />}
+      {type === "pick" && <PickQuiz quiz={quiz} onDone={recordAttempt} />}
     </div>
   );
 }
@@ -329,58 +335,61 @@ function SentenceQuiz({
   );
 }
 
-function CountQuiz({
+function PickQuiz({
   quiz,
   onDone,
 }: {
   quiz: any;
   onDone: (correct: boolean) => void;
 }) {
-  const { item_name, correct_count, min, max } = quiz.quiz_data || {};
-  const [selected, setSelected] = useState<number | null>(null);
-  const [answered, setAnswered] = useState(false);
+  const wordBank: string[] = quiz.quiz_data?.word_bank || [];
+  const correctWords: string[] = quiz.quiz_data?.correct_words || [];
+  const [found, setFound] = useState<string[]>([]);
+  const [wrongFlash, setWrongFlash] = useState<string | null>(null);
+  const [done, setDone] = useState(false);
 
-  function pick(n: number) {
-    if (answered) return;
-    setSelected(n);
-    setAnswered(true);
-    onDone(n === correct_count);
+  function handleClick(word: string) {
+    if (done || found.includes(word)) return;
+
+    if (correctWords.includes(word)) {
+      const newFound = [...found, word];
+      setFound(newFound);
+      if (newFound.length === correctWords.length) {
+        setDone(true);
+        onDone(true);
+      }
+    } else {
+      setWrongFlash(word);
+      setTimeout(() => setWrongFlash(null), 400);
+    }
   }
-
-  const numbers = [];
-  for (let i = min; i <= max; i++) numbers.push(i);
 
   return (
     <div>
-      <p className="text-sm text-slate-500 mb-2">How many {item_name}?</p>
-      <div className="flex gap-2 flex-wrap">
-        {numbers.map((n) => {
-          let style = "border-slate-200";
-          if (answered && n === selected) {
-            style =
-              n === correct_count
-                ? "bg-green-100 border-green-400"
-                : "bg-red-100 border-red-400";
-          } else if (answered && n === correct_count) {
-            style = "bg-green-50 border-green-300";
-          }
-          return (
-            <button
-              key={n}
-              onClick={() => pick(n)}
-              disabled={answered}
-              className={`w-10 h-10 rounded border font-bold ${style}`}
-            >
-              {n}
-            </button>
-          );
-        })}
+      <p className="text-sm text-slate-500 mb-3">
+        {found.length} / {correctWords.length} found
+      </p>
+      <div className="grid grid-cols-3 gap-2">
+        {wordBank.map((word, i) => (
+          <button
+            key={i}
+            onClick={() => handleClick(word)}
+            disabled={found.includes(word)}
+            className={`p-3 rounded-lg font-semibold text-white transition-all ${
+              found.includes(word)
+                ? "bg-green-500"
+                : wrongFlash === word
+                  ? "bg-red-400"
+                  : "bg-slate-700 hover:bg-slate-600"
+            }`}
+          >
+            {word}
+          </button>
+        ))}
       </div>
-      {answered && (
-        <p className="mt-2 font-semibold text-sm">
-          {selected === correct_count
-            ? `✅ Correct! +${quiz.xp_reward} XP`
-            : `❌ The answer was ${correct_count}`}
+      {done && (
+        <p className="mt-3 font-semibold text-sm text-green-700">
+          🎉 All found! +{quiz.xp_reward} XP
         </p>
       )}
     </div>

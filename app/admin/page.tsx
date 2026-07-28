@@ -51,11 +51,9 @@ export default function AdminPage() {
   const [sentenceWordBank, setSentenceWordBank] = useState("");
   const [sentenceCorrectAnswer, setSentenceCorrectAnswer] = useState("");
 
-  // Count
-  const [countItemName, setCountItemName] = useState("");
-  const [countCorrect, setCountCorrect] = useState(1);
-  const [countMin, setCountMin] = useState(1);
-  const [countMax, setCountMax] = useState(10);
+  // Pick
+  const [pickWordBank, setPickWordBank] = useState("");
+  const [pickCorrectWords, setPickCorrectWords] = useState("");
 
   const [newStudentUsername, setNewStudentUsername] = useState("");
   const [newStudentPassword, setNewStudentPassword] = useState("");
@@ -215,15 +213,27 @@ export default function AdminPage() {
       };
     }
 
-    if (quizType === "count") {
-      if (!countItemName.trim())
-        return alert('Enter what the student is counting (e.g. "apples")');
-      quizData = {
-        item_name: countItemName,
-        correct_count: countCorrect,
-        min: countMin,
-        max: countMax,
-      };
+    if (quizType === "pick") {
+      const wordBank = pickWordBank
+        .split(",")
+        .map((w) => w.trim())
+        .filter(Boolean);
+      const correctWords = pickCorrectWords
+        .split(",")
+        .map((w) => w.trim())
+        .filter(Boolean);
+
+      if (wordBank.length < 3)
+        return alert("Add at least 3 words in the word bank");
+      if (correctWords.length < 1) return alert("Add at least 1 correct word");
+
+      const invalid = correctWords.filter((w) => !wordBank.includes(w));
+      if (invalid.length > 0)
+        return alert(
+          "These correct words aren't in the word bank: " + invalid.join(", "),
+        );
+
+      quizData = { word_bank: wordBank, correct_words: correctWords };
     }
 
     const { error } = await supabase.from("quizzes").insert({
@@ -258,8 +268,8 @@ export default function AdminPage() {
     setSentenceText("");
     setSentenceWordBank("");
     setSentenceCorrectAnswer("");
-    setCountItemName("");
-    setCountCorrect(1);
+    setPickWordBank("");
+    setPickCorrectWords("");
     alert("Quiz question added!");
   }
 
@@ -580,7 +590,7 @@ export default function AdminPage() {
           <option value="match">Match (word-word or image-word)</option>
           <option value="spell">Spell the word</option>
           <option value="sentence">Complete the sentence</option>
-          <option value="count">Pick a number (counting)</option>
+          <option value="pick">Pick correct words from a set</option>
         </select>
 
         <input
@@ -787,53 +797,33 @@ export default function AdminPage() {
           </div>
         )}
 
-        {/* Count fields */}
-        {quizType === "count" && (
+        {/* Pick fields */}
+        {quizType === "pick" && (
           <div className="mb-3">
             <label className="text-xs text-slate-500 mb-1 block">
-              What are they counting?
+              All words to show (comma separated) — e.g. "I, like, you, he,
+              always, sometimes, read, she, usually, goes, it, bread"
             </label>
-            <input
+            <textarea
               className="border border-slate-200 rounded-lg p-2 w-full mb-2"
-              placeholder="e.g. apples"
-              value={countItemName}
-              onChange={(e) => setCountItemName(e.target.value)}
+              value={pickWordBank}
+              onChange={(e) => setPickWordBank(e.target.value)}
+              rows={2}
             />
-            <div className="flex gap-2">
-              <div className="flex-1">
-                <label className="text-xs text-slate-500 mb-1 block">
-                  Correct count
-                </label>
-                <input
-                  type="number"
-                  className="border border-slate-200 rounded-lg p-2 w-full"
-                  value={countCorrect}
-                  onChange={(e) => setCountCorrect(Number(e.target.value))}
-                />
-              </div>
-              <div className="flex-1">
-                <label className="text-xs text-slate-500 mb-1 block">
-                  Min option
-                </label>
-                <input
-                  type="number"
-                  className="border border-slate-200 rounded-lg p-2 w-full"
-                  value={countMin}
-                  onChange={(e) => setCountMin(Number(e.target.value))}
-                />
-              </div>
-              <div className="flex-1">
-                <label className="text-xs text-slate-500 mb-1 block">
-                  Max option
-                </label>
-                <input
-                  type="number"
-                  className="border border-slate-200 rounded-lg p-2 w-full"
-                  value={countMax}
-                  onChange={(e) => setCountMax(Number(e.target.value))}
-                />
-              </div>
-            </div>
+            <label className="text-xs text-slate-500 mb-1 block">
+              Correct words only (comma separated, must be a subset of the words
+              above)
+            </label>
+            <textarea
+              className="border border-slate-200 rounded-lg p-2 w-full"
+              value={pickCorrectWords}
+              onChange={(e) => setPickCorrectWords(e.target.value)}
+              rows={2}
+            />
+            <p className="text-xs text-slate-400 mt-1">
+              Tip: write your instruction above like "Pick 5 Subject Pronouns" —
+              the number should match how many correct words you list here.
+            </p>
           </div>
         )}
 

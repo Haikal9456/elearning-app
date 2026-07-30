@@ -8,7 +8,7 @@ const nunito = Nunito({
 });
 
 export const metadata: Metadata = {
-  title: "My E-Learning Academy",
+  title: "English E-Learning Website",
   description: "Learn, earn XP, and level up!",
 };
 

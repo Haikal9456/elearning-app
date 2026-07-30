@@ -1,37 +1,42 @@
-'use client'
-import { useEffect, useState } from 'react'
-import { createClient } from '@/lib/supabase'
+"use client";
+import { useEffect, useState } from "react";
+import { createClient } from "@/lib/supabase";
 
 export default function Leaderboard() {
-  const [students, setStudents] = useState<any[]>([])
-  const [currentUserId, setCurrentUserId] = useState<string | null>(null)
-  const [loading, setLoading] = useState(true)
-  const supabase = createClient()
+  const [students, setStudents] = useState<any[]>([]);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const supabase = createClient();
 
   useEffect(() => {
     async function load() {
-      const { data: { user } } = await supabase.auth.getUser()
-      setCurrentUserId(user?.id || null)
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      setCurrentUserId(user?.id || null);
 
       const { data } = await supabase
-        .from('profiles')
-        .select('id, username, total_xp, level')
-        .order('total_xp', { ascending: false })
-        .limit(50)
+        .from("profiles")
+        .select("id, username, total_xp, level")
+        .eq("role", "student")
+        .order("total_xp", { ascending: false })
+        .limit(50);
 
-      setStudents(data || [])
-      setLoading(false)
+      setStudents(data || []);
+      setLoading(false);
     }
-    load()
-  }, [])
+    load();
+  }, []);
 
-  const medals = ['🥇', '🥈', '🥉']
+  const medals = ["🥇", "🥈", "🥉"];
 
-  if (loading) return <div className="text-center mt-20">Loading...</div>
+  if (loading) return <div className="text-center mt-20">Loading...</div>;
 
   return (
     <div className="max-w-2xl mx-auto mt-10 p-6">
-      <a href="/dashboard" className="text-blue-600 text-sm">← Back to Dashboard</a>
+      <a href="/dashboard" className="text-blue-600 text-sm">
+        ← Back to Dashboard
+      </a>
       <h1 className="text-2xl font-bold mt-2 mb-6">🏆 Leaderboard</h1>
 
       {students.length === 0 ? (
@@ -39,9 +44,11 @@ export default function Leaderboard() {
       ) : (
         <ol className="space-y-2">
           {students.map((s, i) => (
-            <li key={s.id}
+            <li
+              key={s.id}
               className={`flex justify-between items-center border rounded-lg p-3
-                ${s.id === currentUserId ? 'bg-blue-50 border-blue-400' : ''}`}>
+                ${s.id === currentUserId ? "bg-blue-50 border-blue-400" : ""}`}
+            >
               <div className="flex items-center gap-3">
                 <span className="w-8 text-center font-semibold">
                   {medals[i] || `#${i + 1}`}
@@ -60,5 +67,5 @@ export default function Leaderboard() {
         </ol>
       )}
     </div>
-  )
+  );
 }
